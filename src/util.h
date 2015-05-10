@@ -8,6 +8,7 @@
 
 typedef unsigned char bool;
 
+#define BIG_BUFSIZE 131072
 #define BUFSIZE 8096
 #define true 1
 #define false 0
