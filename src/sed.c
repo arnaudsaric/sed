@@ -1,33 +1,64 @@
 #include "util.h"
 #include "compile.h"
 #include "module.h"
+#include <argp.h>
 
-int sed (module* mod, char* commands, FILE* in, FILE* out) {
+typedef struct script {
+    bool is_file;
+    char* text;
+    token* tokens;
+    void* mod_data;
+    struct script *next;
+} script;
+
+int sed (module* mod, script* scripts, FILE* in, FILE* out, bool quiet) {
     buffers bufs;
     memset(&bufs, 0, sizeof(bufs));
     flags fl;
-    token* first = compile(mod->commands, commands);
-    if (!first) {
-        fprintf(stderr, "Failed to compile '%s'\n", commands);
-        return EXIT_FAILURE;
+    for (script* s = scripts; s; s = s->next) {
+        if (s->is_file) {
+            FILE* f;
+            if (!(f = fopen(s->text, "r"))) {
+                fprintf(stderr, "Could not open script file %s\n", s->text);
+                break;
+            }
+            else {
+                int i = 0;
+                char big_buffer[BIG_BUFSIZE] = {0};
+                while (fgets(big_buffer + i, BIG_BUFSIZE - i, f))
+                    i = strlen(big_buffer);
+                big_buffer[BIG_BUFSIZE-1] = 0;
+                s->tokens = compile(mod->commands, big_buffer);
+            }
+        }
+        else
+            s->tokens = compile(mod->commands, s->text);
+        if (!s->tokens) {
+            fprintf(stderr, "Failed to compile '%s'\n", s->text);
+            return EXIT_FAILURE;
+        }
+        s->mod_data = mod->prepare(s->tokens);
     }
-    void* mod_data = mod->prepare(first);
     int line_number = 0;
     get_new_line(bufs.pattern, in);
     get_new_line(bufs.lookahead, in);
     while(*(bufs.pattern)) {
-        token* tok = first;
         memset(&fl, 0, sizeof(fl));
         line_number++;
         memset(bufs.append, 0, BUFSIZE);
-        while (tok) {
-            bool matched = mod->match(line_number, bufs.pattern, &(tok->in_range), tok->addresses, tok->subtypes, tok->delimiter);
-            mod->process((unsigned char)tok->command, matched||tok->in_range, &tok, &line_number, &bufs, &fl, mod_data, in, out);
-            if (fl.nextcycle || fl.stop)
+        for (script* s = scripts; s; s = s->next) {
+            token* tok = s->tokens;
+            while (tok) {
+                bool matched = mod->match(line_number, bufs.pattern, &(tok->in_range), tok->addresses, tok->subtypes, tok->delimiter);
+                mod->process((unsigned char)tok->command, matched||tok->in_range, &tok, &line_number, &bufs, &fl, s->mod_data, in, out);
+                if (fl.nextcycle || fl.stop)
+                    break;
+                tok = tok->nexttoken;
+            }
+            if (fl.stop)
                 break;
-            tok = tok->nexttoken;
         }
-        if (!fl.noprint)
+        if (!fl.noprint && !quiet)
             printf("%s\n", bufs.pattern);
         if (*(bufs.append))
             printf("%s\n", bufs.append);
@@ -41,25 +72,107 @@ int sed (module* mod, char* commands, FILE* in, FILE* out) {
     return 0;
 }
 
-void usage(char* invocation) {
-    fprintf(stderr, "Usage: %s 'commands' file\n", invocation);
-    exit(EXIT_FAILURE);
+typedef struct in {
+    char* file;
+    struct in *next;
+} in;
+
+typedef struct {
+    bool quiet;
+    script* scripts;
+    in* ins;
+    char* module;
+} options;
+
+error_t option_parser (int key, char* arg, struct argp_state* state) {
+    options* input = (options*)(state->input);
+    if (key == 'n') {
+        input->quiet=true;
+        return 0;
+    }
+    if (key == 'M') {
+        input->module = (char*) malloc(strlen(arg));
+        strcpy(input->module, (const char*) arg);
+        return 0;
+    }
+    if (key == ARGP_KEY_ARG) {
+        if (!input->scripts) {
+            input->scripts = (script*) malloc(sizeof(script));
+            input->scripts->is_file = false;
+            input->scripts->text = (char*) malloc(strlen(arg));
+            strcpy(input->scripts->text, (const char*) arg);
+            input->scripts->next = 0;
+            return 0;
+        }
+        in* i;
+        if (!input->ins) {
+            input->ins = (in*) malloc(sizeof(in));
+            i = input->ins;
+        }
+        else {
+            for (i = input->ins;i->next;i=i->next);
+            i->next = (in*) malloc(sizeof(in));
+            i = i->next;
+        }
+        i->file = (char*) malloc(strlen(arg));
+        strcpy(i->file, (const char*) arg);
+        i->next = 0;
+        return 0;
+    }
+    if (key != 'e' && key != 'f')
+        return ARGP_ERR_UNKNOWN;
+    script* s;
+    if (!input->scripts) {
+        input->scripts = (script*) malloc(sizeof(script));
+        s = input->scripts;
+    }
+    else {
+        for (s=input->scripts;s->next;s = s->next);
+        s->next = (script*) malloc(sizeof(script));
+        s = s->next;
+    }
+    s->is_file = (key == 'f');
+    s->text = (char*) malloc(strlen(arg));
+    strcpy(s->text, (const char*) arg);
+    s->next = 0;
+    return 0;
 }
 
 int main (int argc, char ** argv) {
-    if (argc == 1)
-        usage(argv[0]);
-    module* mod_posix;
-    init_mod(&mod_posix,"modules/posix.so");
-    if (argc == 2)
-        exit(sed(mod_posix, argv[1], stdin, stdout));
+    const struct argp_option parser_options[6] = {
+        {.name = "quiet",      .key = 'n', .arg = NULL,          .flags = 0,            .doc = "No automatic printing of pattern space"},
+        {.name = "silent",     .key = 'n', .arg = NULL,          .flags = OPTION_ALIAS, .doc = NULL},
+        {.name = "expression", .key = 'e', .arg = "script",      .flags = 0,            .doc = "A script string to be executed"},
+        {.name = "file",       .key = 'f', .arg = "script-file", .flags = 0,            .doc = "A file containing a script to be executed"},
+        {.name = "module",     .key = 'M', .arg = "module-file", .flags = 0,            .doc = "An msed module"}
+    };
+    const struct argp_child child = {0};
+    struct argp parser = {
+        .options = parser_options,
+        .parser = &option_parser,
+        .args_doc = "\ninput-files\nscript [input-files]",
+        .doc = "MSed v0.0.1, a Modular Stream EDitor\vIf no -e or -f option is specified, the first non-option argument will be used as a script and all the others as input files. Otherwise, all non-option arguments are used as input files.",
+        .children = &child,
+        .help_filter = NULL,
+        .argp_domain = NULL,
+    };
+    module* mod;
+    options opts = {0};
+    argp_parse(&parser, argc, argv, 0, NULL, &opts);
+    if (!opts.scripts) {
+        fprintf(stderr, "No script specified! Type %s --help for usage.\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    init_mod(&mod,opts.module);
+    if (!opts.ins)
+        exit(sed(mod, opts.scripts, stdin, stdout, opts.quiet));
     FILE *file = 0;
     int ret = 0;
-    for (int i = 3; i <= argc; i++)
-        if (!(file = fopen(argv[i-1], "r")))
-            fprintf(stderr, "Could not open %s\n", argv[i-1]);
+    for (in* i = opts.ins; i; i = i->next)
+        if (!(file = fopen(i->file, "r")))
+            fprintf(stderr, "Could not open %s\n", i->file);
         else
-            ret += sed(mod_posix, argv[1], file, stdout);
-    rm_mod(mod_posix);
+            ret += sed(mod, opts.scripts, file, stdout, opts.quiet);
+    rm_mod(mod);
     exit(ret);
 }
