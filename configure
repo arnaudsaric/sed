@@ -125,7 +125,6 @@ sed -i "/^OUTPUT/s|=[^=]*$|=$MODOUT|" $MODDIR/Makefile
 sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$MODPUT|" $MODDIR/Makefile
 sed -i "/^SRC/s|=[^=]*$|=$MODSRC|" $MODDIR/Makefile
 sed -i "/^CFLAGS/s/$/ -I../" $DBGDIR/Makefile
-sed -i "/^LDFLAGS/s/$/ -L../" $DBGDIR/Makefile
 sed -i "/^OUTPUT/s|=[^=]*$|=$DBGOUT|" $DBGDIR/Makefile
 sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$DBGPUT|" $DBGDIR/Makefile
 sed -i "/^SRC/s|=[^=]*$|=$DBGSRC|" $DBGDIR/Makefile
