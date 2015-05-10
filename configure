@@ -1,0 +1,131 @@
+#! /bin/sh
+
+SRCDIR=src
+SRCSRC='sed.c compile.c module.c'
+SRCOUT='sed'
+SRCPUT=bin
+MODDIR=src/modules
+MODSRC='posix.c module.c'
+MODOUT='posix.so'
+MODPUT=bin/modules
+DBGDIR=src/debug
+DBGSRC='debug.c ../compile.c ../module.c'
+DBGOUT='debug'
+DBGPUT=bin
+CC='gcc clang cc'
+HEADERS='stdio.h stdlib.h string.h'
+FUNCTIONS='atoi malloc memset realloc strcat strcmp strcpy strlen strtok strtok_r'
+CFLAGS='-std=c99 -Wall -Wextra -Wno-unused-parameter'
+LDFLAGS='-ldl'
+echo -n "Checking for a C compiler ... "
+found=0
+
+for c in $CC; do
+    if [ -n "`which $c`" ]; then
+        cc=$c
+        echo "yes"
+        found=1
+        break
+    fi
+done
+if [ ! $found ]; then
+    echo "no"
+    echo "Test failed, exiting"
+    exit 1
+fi
+
+echo -n "Checking for make ... "
+if [ -n "`which make`" ]; then
+    echo "yes"
+else
+    echo "no"
+    echo "Test failed, exiting"
+    exit 1
+fi
+
+for h in $HEADERS; do
+    echo -n "Testing for $h ... "
+    if [ -z "`find /usr/include -name $h`" ]; then
+        echo "no"
+        echo "Test failed, exiting"
+        exit 1
+    else
+        echo "yes"
+    fi
+done
+
+for f in $FUNCTIONS; do
+    echo -n "Testing for $f ... "
+    found=0
+    for h in $HEADERS; do
+        if [ -n "`grep "$f (" \`find /usr/include -name $h\``" ]; then
+            echo "yes"
+            found=1
+            break
+        fi
+    done
+    if [ $found == 0 ]; then
+        echo "no"
+        echo "Test failed, exiting"
+        exit 1
+    fi
+done
+
+mkdir -p $SRCPUT
+mkdir -p $MODPUT
+mkdir -p $DBGPUT
+
+echo "all:" > Makefile
+echo -e "\tcd $SRCDIR && make all" >> Makefile
+echo -e "\tcd $MODDIR && make all" >> Makefile
+echo -e "\tcd $DBGDIR && make all" >> Makefile
+echo "" >> Makefile
+echo "clean:" >> Makefile
+echo -e "\tcd $SRCDIR && make clean" >> Makefile
+echo -e "\tcd $MODDIR && make clean" >> Makefile
+echo -e "\tcd $DBGDIR && make clean" >> Makefile
+echo "" >> Makefile
+echo "cleanall:" >> Makefile
+echo -e "\tmake clean && rm -rf $SRCPUT" >> Makefile
+echo "" >> Makefile
+echo "force:" >> Makefile
+echo -e "\tcd $SRCDIR && make force" >> Makefile
+echo -e "\tcd $MODDIR && make force" >> Makefile
+echo -e "\tcd $DBGDIR && make force" >> Makefile
+
+echo "CC=$cc" > $SRCDIR/Makefile
+echo "CFLAGS=$CFLAGS" >> $SRCDIR/Makefile
+echo "LDFLAGS=$LDFLAGS" >> $SRCDIR/Makefile
+echo "OUTPUT=$SRCOUT" >> $SRCDIR/Makefile
+echo "OUTDIR=$PWD/$SRCPUT" >> $SRCDIR/Makefile
+echo "SRC=$SRCSRC" >> $SRCDIR/Makefile
+echo "OBJ=\$(SRC:.c=.o)" >> $SRCDIR/Makefile
+echo "" >> $SRCDIR/Makefile
+echo "all: \$(OUTPUT)" >> $SRCDIR/Makefile
+echo "" >> $SRCDIR/Makefile
+echo "\$(OUTPUT): \$(OBJ)" >> $SRCDIR/Makefile
+echo -e "\t\$(CC) -o \$(OUTPUT) \$(OBJ) \$(LDFLAGS)" >> $SRCDIR/Makefile
+echo -e "\tmv \$(OUTPUT) \$(OUTDIR)" >> $SRCDIR/Makefile
+echo "" >> $SRCDIR/Makefile
+echo ".c.o:" >> $SRCDIR/Makefile
+echo -e "\t\$(CC) -c \$(CFLAGS) \$<" >> $SRCDIR/Makefile
+echo "" >> $SRCDIR/Makefile
+echo "clean:" >> $SRCDIR/Makefile
+echo -e "\trm -f *.o " >> $SRCDIR/Makefile
+echo "" >> $SRCDIR/Makefile
+echo "force:" >> $SRCDIR/Makefile
+echo -e "\tmake clean && make all" >> $SRCDIR/Makefile
+
+cp $SRCDIR/Makefile $MODDIR/Makefile
+cp $SRCDIR/Makefile $DBGDIR/Makefile
+
+sed -i "/^CFLAGS/s/$/ -fPIC/" $MODDIR/Makefile
+sed -i "/^LDFLAGS/s/=[^=]*$/=-shared/" $MODDIR/Makefile
+sed -i "/^OUTPUT/s|=[^=]*$|=$MODOUT|" $MODDIR/Makefile
+sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$MODPUT|" $MODDIR/Makefile
+sed -i "/^SRC/s|=[^=]*$|=$MODSRC|" $MODDIR/Makefile
+sed -i "/^CFLAGS/s/$/ -I../" $DBGDIR/Makefile
+sed -i "/^LDFLAGS/s/$/ -L../" $DBGDIR/Makefile
+sed -i "/^OUTPUT/s|=[^=]*$|=$DBGOUT|" $DBGDIR/Makefile
+sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$DBGPUT|" $DBGDIR/Makefile
+sed -i "/^SRC/s|=[^=]*$|=$DBGSRC|" $DBGDIR/Makefile
