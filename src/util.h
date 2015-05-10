@@ -60,6 +60,7 @@ typedef struct command {
     char nextchar;
 } command;
 
+typedef void (*print_func)(bool);
 typedef void (*init_func)(command**);
 typedef void* (*prepare_func)(token*);
 typedef bool (*match_func)(int,char*,bool*,char**,int*,char);

@@ -14,6 +14,57 @@ process_func dispatch_array[128];
 
 #include "posix_process.c"
 
+void print(bool printall) {
+    if (printall) {
+        printf("Commands for module POSIX:\n");
+        printf("\n");
+        printf("General syntax is [address] command [args] ;\n");
+        printf("\n");
+    }
+    printf("Addresses:\n");
+    printf("Valid addresses are:\n");
+    printf("\t- A number.    This address will be matched when the corresponding line number of input is read.\n");
+    printf("\t- $            This address will be matched on the last line of input.\n");
+    printf("\t- /regex/      This address will be matched on every line of input which matches the regex.\n");
+    printf("\t- \\cregexc    Same, but with any delimiter.\n");
+    printf("Valid address ranges are:\n");
+    printf("\t- addr1,addr2  This range will match as soon as addr1 matches, until addr2 matches. It will match at least once.\n");
+    printf("\n");
+    printf("Commands:\n");
+    printf("The number of addresses given here is the maximum accepted, you can always give less than this number (even 0).\n");
+    printf("No-address commands:\n");
+    printf("\t- :label    Defines a label to which b and t can branch. Does nothing.\n");
+    printf("\t- }         Delimits a number of commands with {. Does nothing.\n");
+    printf("\t- #comment  Is a comment. Does nothing.\n");
+    printf("1-address commands:\n");
+    printf("\t- atext     Appends some text. The text will be printed at the end of the cycle.\n");
+    printf("\t- itext     Inserts some text. The text will be printed immediately.\n");
+    printf("\t- q         Quits. Unless -n option is set, current pattern space will still be output.\n");
+    printf("\t- rfile     Reads file. Outputs the content of the file on the output.\n");
+    printf("\t- =         Prints current line number, followed by a newline.\n");
+    printf("2-address commands:\n");
+    printf("\t- {         If the address does not match, ignores the commands until the corresponding }.\n");
+    printf("\t- blabel    Branches to label. If no label is given, branch to the end of the script.\n");
+    printf("\t- ctext     Changes pattern space to text. Restart a new cycle.\n");
+    printf("\t- d         Deletes pattern space and start a new cycle.\n");
+    printf("\t- D         Deletes pattern space until first newline. Behaves like d if no newline, else start a new cycle without reading input.\n");
+    printf("\t- g         Copies hold space into pattern space.\n");
+    printf("\t- G         Appends a newline, and the hold space to the pattern space.\n");
+    printf("\t- h         Copies pattern space into hold space.\n");
+    printf("\t- H         Appends a newline, and the pattern space to the hold space.\n");
+    printf("\t- l         Outputs pattern space in a visually unambiguous form.\n");
+    printf("\t- n         Prints pattern space and a newline, and reads a new line of input.\n");
+    printf("\t- N         Reads a new line of input and appends it to pattern space, preceded by a newline.\n");
+    printf("\t- p         Prints the pattern space and a newline.\n");
+    printf("\t- P         Prints the pattern space until the first newline and a newline.\n");
+    printf("\t- s/p/r/f   Searches in pattern space and replace matches of p by r. Flags: number, g, p, w\n");
+    printf("\t- tlabel    Branches to label if a successful substitution was made.\n");
+    printf("\t- wfile     Appends pattern space to file.\n");
+    printf("\t- x         Exchanges pattern space and hold space.\n");
+    printf("\t- y/a/b/    Replaces characters in a by corresponding characters in b.\n");
+    printf("\n");
+}
+
 void init(command** ret) {
     memset(ret, 0, sizeof(*ret));
     define_command(ret, posix_lb, COMMAND, 0, 2, "{", 0);

@@ -151,7 +151,7 @@ int main (int argc, char ** argv) {
         .options = parser_options,
         .parser = &option_parser,
         .args_doc = "\ninput-files\nscript [input-files]",
-        .doc = "MSed v0.0.1, a Modular Stream EDitor\vIf no -e or -f option is specified, the first non-option argument will be used as a script and all the others as input files. Otherwise, all non-option arguments are used as input files.",
+        .doc = "MSed v0.0.1, a Modular Stream EDitor\vIf no -e or -f option is specified, the first non-option argument will be used as a script and all the others as input files. Otherwise, all non-option arguments are used as input files. \033[1mTo get information on the commands of a module, type \"sed -M module-file\".\033[0m",
         .children = &child,
         .help_filter = NULL,
         .argp_domain = NULL,
@@ -159,11 +159,12 @@ int main (int argc, char ** argv) {
     module* mod;
     options opts = {0};
     argp_parse(&parser, argc, argv, 0, NULL, &opts);
-    if (!opts.scripts) {
-        fprintf(stderr, "No script specified! Type %s --help for usage.\n", argv[0]);
+    if (!opts.module) {
+        fprintf(stderr, "No module specified! Here is usage:\n");
+        execl(argv[0], "--help", NULL);
         exit(EXIT_FAILURE);
     }
-    init_mod(&mod,opts.module);
+    init_mod(&mod, opts.module, !opts.scripts);
     if (!opts.ins)
         exit(sed(mod, opts.scripts, stdin, stdout, opts.quiet));
     FILE *file = 0;
