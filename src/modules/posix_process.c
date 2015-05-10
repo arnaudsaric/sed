@@ -123,10 +123,14 @@ void posix_process_N(bool matched, token** tok, int* line_number, buffers* bufs,
         fl->stop = true;
         return;
     }
-    strcat(bufs->pattern, "\n");
-    strcat(bufs->pattern, (const char*) bufs->lookahead);
+    bool ok = (1 + strlen(bufs->pattern) + strlen(bufs->lookahead) < BUFSIZE);
+    if (ok) {
+        strncat(bufs->pattern, "\n", 1);
+        strncat(bufs->pattern, (const char*) bufs->lookahead, BUFSIZE-strlen(bufs->pattern));
+    }
     get_new_line(bufs->lookahead, in);
     (*line_number)++;
+    assert(ok, "Buffer overflow\n", );
 }
 
 void posix_process_p(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
