@@ -29,6 +29,7 @@ int init_regex(regex_module **mod, char* regexfile, bool printmode) {
     *mod = (regex_module*) malloc (sizeof(regex_module));
     assert(mod, "Could not allocate memory\n", -1);
     (*mod)->handle = handle;
+    (*mod)->regex = NULL;
     (*mod)->compile = (regex_compile_func)compile;
     (*mod)->match = (regex_match_func)match;
     (*mod)->exec = (regex_exec_func)exec;
@@ -36,6 +37,12 @@ int init_regex(regex_module **mod, char* regexfile, bool printmode) {
 }
 
 void rm_regex(regex_module *mod) {
+    void* rm = dlsym(mod->handle, "rm");
+    if (!rm) {
+        fprintf(stderr, "%s\n", dlerror());
+        return;
+    }
+    ((regex_rm_func)rm)(mod->regex);
     dlclose(mod->handle);
     free(mod);
 }
