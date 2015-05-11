@@ -8,6 +8,10 @@ MODDIR=src/modules
 MODSRC='posix.c module.c'
 MODOUT='posix.so'
 MODPUT=bin/modules
+REGDIR=src/regex
+REGSRC='posix.c'
+REGOUT='posix.so'
+REGPUT=bin/regex
 DBGDIR=src/debug
 DBGSRC='debug.c ../compile.c ../module.c'
 DBGOUT='debug'
@@ -73,16 +77,19 @@ done
 
 mkdir -p $SRCPUT
 mkdir -p $MODPUT
+mkdir -p $REGPUT
 mkdir -p $DBGPUT
 
 echo "all:" > Makefile
 echo -e "\tcd $SRCDIR && make all" >> Makefile
 echo -e "\tcd $MODDIR && make all" >> Makefile
+echo -e "\tcd $REGDIR && make all" >> Makefile
 echo -e "\tcd $DBGDIR && make all" >> Makefile
 echo "" >> Makefile
 echo "clean:" >> Makefile
 echo -e "\tcd $SRCDIR && make clean" >> Makefile
 echo -e "\tcd $MODDIR && make clean" >> Makefile
+echo -e "\tcd $REGDIR && make clean" >> Makefile
 echo -e "\tcd $DBGDIR && make clean" >> Makefile
 echo "" >> Makefile
 echo "cleanall:" >> Makefile
@@ -91,6 +98,7 @@ echo "" >> Makefile
 echo "force:" >> Makefile
 echo -e "\tcd $SRCDIR && make force" >> Makefile
 echo -e "\tcd $MODDIR && make force" >> Makefile
+echo -e "\tcd $REGDIR && make force" >> Makefile
 echo -e "\tcd $DBGDIR && make force" >> Makefile
 
 echo "CC=$cc" > $SRCDIR/Makefile
@@ -117,13 +125,18 @@ echo "force:" >> $SRCDIR/Makefile
 echo -e "\tmake clean && make all" >> $SRCDIR/Makefile
 
 cp $SRCDIR/Makefile $MODDIR/Makefile
-cp $SRCDIR/Makefile $DBGDIR/Makefile
-
 sed -i "/^CFLAGS/s/$/ -fPIC/" $MODDIR/Makefile
 sed -i "/^LDFLAGS/s/=[^=]*$/=-shared/" $MODDIR/Makefile
 sed -i "/^OUTPUT/s|=[^=]*$|=$MODOUT|" $MODDIR/Makefile
 sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$MODPUT|" $MODDIR/Makefile
 sed -i "/^SRC/s|=[^=]*$|=$MODSRC|" $MODDIR/Makefile
+
+cp $MODDIR/Makefile $REGDIR/Makefile
+sed -i "/^OUTPUT/s|=[^=]*$|=$REGOUT|" $REGDIR/Makefile
+sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$REGPUT|" $REGDIR/Makefile
+sed -i "/^SRC/s|=[^=]*$|=$REGSRC|" $REGDIR/Makefile
+
+cp $SRCDIR/Makefile $DBGDIR/Makefile
 sed -i "/^CFLAGS/s/$/ -I../" $DBGDIR/Makefile
 sed -i "/^OUTPUT/s|=[^=]*$|=$DBGOUT|" $DBGDIR/Makefile
 sed -i "/^OUTDIR/s|=[^=]*$|=$PWD/$DBGPUT|" $DBGDIR/Makefile
