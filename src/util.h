@@ -78,7 +78,7 @@ typedef struct {
 
 typedef int (*regex_compile_func)(void**,const char*,bool);
 typedef bool (*regex_match_func)(const void*,const char*);
-typedef bool (*regex_exec_func)(const void*,const char*,int,char**,char**);
+typedef bool (*regex_exec_func)(const void*,const char*,int,int*,int*);
 typedef void (*regex_rm_func)(void*);
 
 typedef struct {
