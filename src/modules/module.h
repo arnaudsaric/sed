@@ -1,4 +1,4 @@
-#include "util.h"
+#include "../util.h"
 
 #define define_command(_array, _name, _type, _subtype, _naddr, _pattern, _nextchar) \
     command* _name = (command*) malloc(sizeof(command)); \
