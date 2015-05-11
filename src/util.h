@@ -62,7 +62,7 @@ typedef struct command {
 } command;
 
 typedef void (*print_func)(bool);
-typedef void (*init_func)(command**);
+typedef void (*modinit_func)(command**);
 typedef void* (*prepare_func)(token*);
 typedef bool (*match_func)(int,char*,bool*,char**,int*,char);
 typedef void (*process_func)(bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
@@ -75,5 +75,16 @@ typedef struct {
     match_func match;
     dispatch_func process;
 } module;
+
+typedef int (*regex_compile_func)(void*,const char*);
+typedef bool (*regex_match_func)(const void*,const char*);
+typedef bool (*regex_exec_func)(const void*,const char*,int,char**,char**);
+
+typedef struct {
+    void* handle;
+    regex_compile_func compile;
+    regex_match_func match;
+    regex_exec_func exec;
+} regex_module;
 
 #endif
