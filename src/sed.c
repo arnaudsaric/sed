@@ -161,7 +161,7 @@ int main (int argc, char ** argv) {
     argp_parse(&parser, argc, argv, 0, NULL, &opts);
     if (!opts.module) {
         fprintf(stderr, "No module specified! Here is usage:\n");
-        execl(argv[0], "--help", NULL);
+        execl(argv[0], argv[0], "--help", NULL);
         exit(EXIT_FAILURE);
     }
     init_mod(&mod, opts.module, !opts.scripts);
