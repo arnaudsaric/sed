@@ -61,21 +61,6 @@ typedef struct command {
     char nextchar;
 } command;
 
-typedef void (*print_func)(bool);
-typedef void (*modinit_func)(command**);
-typedef void* (*prepare_func)(token*);
-typedef bool (*match_func)(int,char*,bool*,char**,int*,char);
-typedef void (*process_func)(bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
-typedef void (*dispatch_func)(char,bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
-
-typedef struct {
-    void* handle;
-    const command *commands[128];
-    prepare_func prepare;
-    match_func match;
-    dispatch_func process;
-} module;
-
 typedef int (*regex_compile_func)(void**,const char*,bool);
 typedef bool (*regex_match_func)(const void*,const char*);
 typedef bool (*regex_exec_func)(const void*,const char*,int,int*,int*);
@@ -88,5 +73,21 @@ typedef struct {
     regex_match_func match;
     regex_exec_func exec;
 } regex_module;
+
+typedef void (*print_func)(bool);
+typedef void (*modinit_func)(command**,regex_module*);
+typedef void (*modrm_func)(command**);
+typedef void* (*prepare_func)(token*);
+typedef bool (*match_func)(int,char*,bool*,char**,int*,char);
+typedef void (*process_func)(bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
+typedef void (*dispatch_func)(char,bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
+
+typedef struct {
+    void* handle;
+    const command *commands[128];
+    prepare_func prepare;
+    match_func match;
+    dispatch_func process;
+} module;
 
 #endif

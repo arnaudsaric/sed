@@ -1,4 +1,6 @@
-#include "posix.h"
+#include "module.h"
+
+void init_mod_posix(module** mod);
 
 #define subtype_LINE 0
 #define subtype_PATTERN 1
@@ -65,7 +67,7 @@ void print(bool printall) {
     printf("\n");
 }
 
-void init(command** ret) {
+void init(command** ret, regex_module* regex) {
     memset(ret, 0, sizeof(*ret));
     define_command(ret, posix_lb, COMMAND, 0, 2, "{", 0);
     define_command(ret, posix_rb, COMMAND, 0, 0, "}", 0);

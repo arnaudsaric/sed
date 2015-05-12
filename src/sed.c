@@ -179,7 +179,7 @@ int main (int argc, char ** argv) {
         exit(EXIT_FAILURE);
     }
     init_regex(&regex_mod, opts.regex_mod, false);
-    init_mod(&mod, opts.module, !opts.scripts);
+    init_mod(&mod, opts.module, !opts.scripts, regex_mod);
     if (!opts.ins)
         exit(sed(mod, opts.scripts, stdin, stdout, opts.quiet));
     FILE *file = 0;
@@ -189,6 +189,7 @@ int main (int argc, char ** argv) {
             fprintf(stderr, "Could not open %s\n", i->file);
         else
             ret += sed(mod, opts.scripts, file, stdout, opts.quiet);
+    rm_regex(regex_mod);
     rm_mod(mod);
     exit(ret);
 }
