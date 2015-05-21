@@ -13,6 +13,7 @@ typedef struct {
 
 int flag_ignore;
 process_func dispatch_array[128];
+regex_module *regex_mod;
 
 #include "posix_process.c"
 
@@ -127,27 +128,37 @@ void init(command** ret, regex_module* regex) {
     dispatch_array['x'] = &posix_process_x;
     dispatch_array['y'] = &posix_process_y;
     dispatch_array['='] = &posix_process_eq;
+    regex_mod = regex;
 }
 
 void* prepare(token* tok) {
     label *labels = (label*) malloc(MAXLABELS*sizeof(label));
     int idx = 0;
     memset(labels, 0, MAXLABELS*sizeof(label));
-    for (;tok;tok=tok->nexttoken)
+    for (;tok;tok=tok->nexttoken) {
         if (tok->command == ':') {
             assert(tok->args, ": expects an argument\n", NULL);
             labels[idx].key = tok->args[0];
             labels[idx].target = tok;
             idx++;
         }
+        tok->mod_data = (void**) malloc(3 * sizeof(void*));
+        memset(tok->mod_data, 0, 3 * sizeof(void*));
+        if (tok->n_addresses == 1 && tok->subtypes[0] == subtype_PATTERN)
+            assert(!regex_mod->compile((void**)tok->mod_data, (const char*) tok->addresses[0], true), "Regex #1 failed to compile", NULL);
+        if (tok->n_addresses == 2 && tok->subtypes[1] == subtype_PATTERN)
+            assert(!regex_mod->compile((void**)tok->mod_data+1, (const char*) tok->addresses[1], true), "Regex #2 failed to compile", NULL);
+        if (tok->command == 's')
+            assert(!regex_mod->compile((void**)tok->mod_data+2, (const char*) tok->args[1], false), "Regex #3 failed to compile", NULL);
+    }
     return labels;
 }
 
-bool match_address(int line_number, char* line, char* addr, int subtype) {
+bool match_address(const int line_number, const char* line, const char* addr, const int subtype, const void* regex) {
     if (subtype == subtype_LINE)
         return (line_number == atoi(addr));
     else
-        return true; //TODO: regex
+        return (regex_mod->match(regex, line)); //TODO: regex
 }
 
 bool match(const int line_number, const char* line, token* tok) {
@@ -158,15 +169,15 @@ bool match(const int line_number, const char* line, token* tok) {
     if (tok->delimiter && tok->delimiter != ',')
         return false; //Should not happen
     if (!tok->delimiter)
-        return match_address(line_number, line, tok->addresses[0], tok->subtypes[0]);
+        return match_address(line_number, line, tok->addresses[0], tok->subtypes[0], ((void**)tok->mod_data)[0]);
     else {
         bool ret;
         if (!(tok->in_range)) {
-            ret = match_address(line_number, line, tok->addresses[0], tok->subtypes[0]);
+            ret = match_address(line_number, line, tok->addresses[0], tok->subtypes[0], ((void**)tok->mod_data)[0]);
             tok->in_range = ret;
         }
         else {
-            ret = match_address(line_number, line, tok->addresses[1], tok->subtypes[1]);
+            ret = match_address(line_number, line, tok->addresses[1], tok->subtypes[1], ((void**)tok->mod_data)[1]);
             tok->in_range = !ret;
         }
         return ret;
