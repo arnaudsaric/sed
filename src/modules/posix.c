@@ -150,24 +150,24 @@ bool match_address(int line_number, char* line, char* addr, int subtype) {
         return true; //TODO: regex
 }
 
-bool match(int line_number, char* line, bool* in_range, char** addrs, int* subtypes, char delimiter) {
+bool match(const int line_number, const char* line, token* tok) {
     if (flag_ignore)
         return false;
-    if (!addrs)
+    if (!(tok->addresses))
         return true;
-    if (delimiter && delimiter != ',')
-        return false; //TODO: Syntax error
-    if (!delimiter)
-        return match_address(line_number, line, *addrs, *subtypes);
+    if (tok->delimiter && tok->delimiter != ',')
+        return false; //Should not happen
+    if (!tok->delimiter)
+        return match_address(line_number, line, tok->addresses[0], tok->subtypes[0]);
     else {
         bool ret;
-        if (!(*in_range)) {
-            ret = match_address(line_number, line, *addrs, *subtypes);
-            *in_range = ret;
+        if (!(tok->in_range)) {
+            ret = match_address(line_number, line, tok->addresses[0], tok->subtypes[0]);
+            tok->in_range = ret;
         }
         else {
-            ret = match_address(line_number, line, addrs[1], subtypes[1]);
-            *in_range = !ret;
+            ret = match_address(line_number, line, tok->addresses[1], tok->subtypes[1]);
+            tok->in_range = !ret;
         }
         return ret;
     }
