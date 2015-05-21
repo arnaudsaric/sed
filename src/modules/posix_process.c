@@ -29,7 +29,6 @@ void posix_process_b(bool matched, token** tok, int* line_number, buffers* bufs,
         }
         i++;
     }
-    i = 0;
 }
 
 void posix_process_c(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
@@ -108,7 +107,7 @@ void posix_process_n(bool matched, token** tok, int* line_number, buffers* bufs,
     fputs((const char*)bufs->pattern, out);
     fputc('\n', out);
     strcpy(bufs->pattern, (const char*) bufs->lookahead);
-    if (!bufs->lookahead) {
+    if (!(bufs->lookahead)) {
         fl->stop = true;
         return;
     }
@@ -119,7 +118,7 @@ void posix_process_n(bool matched, token** tok, int* line_number, buffers* bufs,
 void posix_process_N(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
     if (!matched)
         return;
-    if (!bufs->lookahead) {
+    if (!(bufs->lookahead)) {
         fl->stop = true;
         return;
     }
