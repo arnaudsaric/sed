@@ -50,7 +50,7 @@ int sed (module* mod, script* scripts, FILE* in, FILE* out, bool quiet) {
         for (script* s = scripts; s; s = s->next) {
             token* tok = s->tokens;
             while (tok) {
-                bool matched = mod->match(line_number, bufs.pattern, &(tok->in_range), tok->addresses, tok->subtypes, tok->delimiter);
+                bool matched = mod->match(line_number, bufs.pattern, tok);
                 mod->process((unsigned char)tok->command, matched||tok->in_range, &tok, &line_number, &bufs, &fl, s->mod_data, in, out);
                 if (fl.nextcycle || fl.stop)
                     break;

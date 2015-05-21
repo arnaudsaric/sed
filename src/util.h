@@ -37,6 +37,7 @@ typedef struct token {
     int n_args;
     struct token *nexttoken;
     bool in_range;
+    void* mod_data;
 } token;
 
 typedef struct {
@@ -78,7 +79,7 @@ typedef void (*print_func)(bool);
 typedef void (*modinit_func)(command**,regex_module*);
 typedef void (*modrm_func)(command**);
 typedef void* (*prepare_func)(token*);
-typedef bool (*match_func)(int,char*,bool*,char**,int*,char);
+typedef bool (*match_func)(int,char*,token*);
 typedef void (*process_func)(bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
 typedef void (*dispatch_func)(char,bool,token**,int*,buffers*,flags*,void*,FILE*,FILE*);
 
