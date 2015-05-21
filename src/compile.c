@@ -70,8 +70,11 @@ int read_pattern(const char* description, char nextchar, char* in, char*** out, 
                 break;
             case 's':
                 pattern++;
-                if (!*pattern)
+                bool stop_at_delim = false;
+                if (!*pattern) {
                     this_delim = nextchar;
+                    stop_at_delim = true;
+                }
                 else if (*pattern != '%')
                     this_delim = *pattern;
                 else {
@@ -99,6 +102,10 @@ int read_pattern(const char* description, char nextchar, char* in, char*** out, 
                 fill_while(buffer, *in != this_delim);
                 buffer[i] = 0;
                 ctr += i;
+                if (!stop_at_delim) {
+                    in++;
+                    ctr++;
+                }
                 *out = (char**) realloc(*out, (++(*n_out)) * sizeof(char*));
                 (*out)[*n_out-1] = (char*) malloc(strlen(buffer));
                 strcpy((*out)[*n_out-1], (const char*) buffer);
