@@ -69,7 +69,7 @@ typedef void (*regex_rm_func)(void*);
 
 typedef struct {
     void* handle;
-    void* regex;
+    regex_rm_func rm;
     regex_compile_func compile;
     regex_match_func match;
     regex_exec_func exec;
