@@ -5,41 +5,44 @@
 #include <argp.h>
 
 typedef struct script {
-    bool is_file;
     char* text;
     token* tokens;
     void* mod_data;
     struct script *next;
+    bool is_file;
+    bool compiled;
 } script;
 
 int sed (module* mod, script* scripts, FILE* in, FILE* out, bool quiet) {
     buffers bufs;
     memset(&bufs, 0, sizeof(bufs));
     flags fl;
-    for (script* s = scripts; s; s = s->next) {
-        if (s->is_file) {
-            FILE* f;
-            if (!(f = fopen(s->text, "r"))) {
-                fprintf(stderr, "Could not open script file %s\n", s->text);
-                break;
+    if (!scripts->compiled)
+        for (script* s = scripts; s; s = s->next) {
+            if (s->is_file) {
+                FILE* f;
+                if (!(f = fopen(s->text, "r"))) {
+                    fprintf(stderr, "Could not open script file %s\n", s->text);
+                    break;
+                }
+                else {
+                    int i = 0;
+                    char big_buffer[BIG_BUFSIZE] = {0};
+                    while (fgets(big_buffer + i, BIG_BUFSIZE - i, f))
+                        i = strlen(big_buffer);
+                    big_buffer[BIG_BUFSIZE-1] = 0;
+                    s->tokens = compile(mod->commands, big_buffer);
+                }
             }
-            else {
-                int i = 0;
-                char big_buffer[BIG_BUFSIZE] = {0};
-                while (fgets(big_buffer + i, BIG_BUFSIZE - i, f))
-                    i = strlen(big_buffer);
-                big_buffer[BIG_BUFSIZE-1] = 0;
-                s->tokens = compile(mod->commands, big_buffer);
+            else
+                s->tokens = compile(mod->commands, s->text);
+            if (!s->tokens) {
+                fprintf(stderr, "Failed to compile '%s'\n", s->text);
+                return EXIT_FAILURE;
             }
+            s->mod_data = mod->prepare(s->tokens);
+            s->compiled = true;
         }
-        else
-            s->tokens = compile(mod->commands, s->text);
-        if (!s->tokens) {
-            fprintf(stderr, "Failed to compile '%s'\n", s->text);
-            return EXIT_FAILURE;
-        }
-        s->mod_data = mod->prepare(s->tokens);
-    }
     int line_number = 0;
     get_new_line(bufs.pattern, in);
     get_new_line(bufs.lookahead, in);
