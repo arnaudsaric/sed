@@ -1,7 +1,7 @@
 #! /bin/sh
 
 SRCDIR=src
-SRCSRC='sed.c compile.c module.c regex.c'
+SRCSRC='main.c sed.c compile.c module.c regex.c'
 SRCOUT='sed'
 SRCPUT=bin
 MODDIR=src/modules
