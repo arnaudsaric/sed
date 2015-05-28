@@ -161,8 +161,13 @@ void posix_process_q(bool matched, token** tok, int* line_number, buffers* bufs,
 void posix_process_r(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
     if (!matched)
         return;
-    //char* arg = *((*tok)->args);
-    printf("TODO %c\n", (*tok)->command);//TODO
+    char* arg = *((*tok)->args);
+    FILE* file = fopen(arg, "r");
+    if (!file)
+        return;
+    char buffer[BUFSIZE];
+    while (fgets(buffer, BUFSIZE, file))
+        fputs(buffer, out);
 }
 
 void posix_process_s(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
@@ -182,8 +187,12 @@ void posix_process_t(bool matched, token** tok, int* line_number, buffers* bufs,
 void posix_process_w(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
     if (!matched)
         return;
-    //char* arg = *((*tok)->args);
-    printf("TODO %c\n", (*tok)->command);//TODO
+    char* arg = *((*tok)->args);
+    FILE* file = fopen(arg, "a");
+    if (!file)
+        return;
+    fputc('\n', file);
+    fputs(bufs->pattern, file);
 }
 
 void posix_process_x(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
