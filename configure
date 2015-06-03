@@ -1,5 +1,6 @@
 #! /bin/sh
 
+#Makefile vars
 SRCDIR=src
 SRCSRC='main.c sed.c compile.c module.c regex.c'
 SRCOUT='sed'
@@ -16,11 +17,17 @@ DBGDIR=src/debug
 DBGSRC='debug.c ../compile.c ../module.c ../regex.c'
 DBGOUT='debug'
 DBGPUT=bin
-CC='gcc clang cc'
-HEADERS='stdio.h stdlib.h string.h unistd.h'
-FUNCTIONS='atoi execl malloc memset realloc strcat strncat strcmp strcpy strncpy strlen strtok strtok_r'
 CFLAGS='-std=c99 -Wall -Wextra -Wno-unused-parameter'
 LDFLAGS='-ldl'
+CC='gcc clang cc'
+
+abort() {
+    echo "Aborting..."
+    exit 1
+}
+
+#Checking for compiling tools
+
 echo -n "Checking for a C compiler ... "
 found=0
 
@@ -34,8 +41,7 @@ for c in $CC; do
 done
 if [ ! $found ]; then
     echo "no"
-    echo "Test failed, exiting"
-    exit 1
+    abort
 fi
 
 echo -n "Checking for make ... "
@@ -43,37 +49,79 @@ if [ -n "`which make`" ]; then
     echo "yes"
 else
     echo "no"
-    echo "Test failed, exiting"
-    exit 1
+    abort
 fi
 
-for h in $HEADERS; do
-    echo -n "Testing for $h ... "
-    if [ -z "`find /usr/include -name $h`" ]; then
-        echo "no"
-        echo "Test failed, exiting"
-        exit 1
-    else
-        echo "yes"
-    fi
-done
+#Checking required headers and functions
 
-for f in $FUNCTIONS; do
-    echo -n "Testing for $f ... "
-    found=0
-    for h in $HEADERS; do
-        if [ -n "`grep "$f (" \`find /usr/include -name $h\``" ]; then
+get_headers() {
+    grep -s "#include <" $1/*.{c,h}  | cut -d '<' -f 2 | cut -d '>' -f 1 | sort -u
+}
+
+check_headers() {
+    errors=0
+    for h in $1; do
+        echo -n "Testing for $h ... "
+        if [ -z "`find /usr/include -type f | grep $h`" ]; then
+            echo "no"
+            ((errors++))
+        else
             echo "yes"
-            found=1
-            break
         fi
     done
-    if [ $found == 0 ]; then
-        echo "no"
-        echo "Test failed, exiting"
-        exit 1
-    fi
+    [[ $errors != 0 ]] && echo "$errors error(s)"
+    return $errors
+}
+
+exclude_keywords() {
+    grep -wv "while" | grep -wv "switch" | grep -wv "if" | grep -wv "for"
+}
+
+get_function_calls() {
+    grep -s -o -e "^ *\([^=]*= \?\)\?\( \?([a-z_]\+\*) \?\)\?[a-z_]\+ *(" $1/*.c
+}
+
+get_all_functions() {
+    for dir in $1; do
+        OWN_FUNCS="$OWN_FUNCS $(grep -s -e "^[a-z*_]\+ [a-z_]\+ \?(" $dir/*.c | cut -d '(' -f 1 | cut -d ' ' -f 2)"
+        OWN_MACROS="$OWN_MACROS $(grep -s -e "#define [a-z_]\+ \?(" $dir/*.h | cut -d '(' -f 1 | cut -d ' ' -f 2)"
+        ALL_FUNCS="$ALL_FUNCS $(get_function_calls $dir | cut -d '=' -f 2 | cut -d ':' -f 2 | cut -d ')' -f 2 | cut -d '(' -f 1 | tr -d ' ' | exclude_keywords | sort -u)"
+    done
+    for func in $ALL_FUNCS; do
+        [[ $OWN_FUNCS =~ "$func" ]] || [[ $OWN_MACROS =~ "$func" ]] || echo $func
+    done
+}
+
+check_functions(){
+    errors=0
+    for f in $1; do
+        echo -n "Testing for $f ... "
+        found=0
+        for h in $2; do
+            if [ -n "`grep "$f (" \`find /usr/include -type f | grep $h\``" ]; then
+                echo "yes"
+                found=1
+                break
+            fi
+        done
+        if [ $found == 0 ]; then
+            echo "no"
+            ((errors++))
+        fi
+    done
+    [[ $errors != 0 ]] && echo "$errors error(s)"
+    return $errors
+}
+
+DIRS="$SRCDIR $MODDIR $REGDIR $DBGDIR"
+for dir in $DIRS; do
+    HEADERS="$HEADERS $(get_headers $dir)"
 done
+FUNCTIONS=$(get_all_functions "$DIRS" | sort -u)
+check_headers "$HEADERS" || abort
+check_functions "$FUNCTIONS" "$HEADERS" || abort
+
+#Generatign directories and makefiles
 
 mkdir -p $SRCPUT
 mkdir -p $MODPUT
