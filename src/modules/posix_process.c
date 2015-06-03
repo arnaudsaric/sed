@@ -207,8 +207,16 @@ void posix_process_x(bool matched, token** tok, int* line_number, buffers* bufs,
 void posix_process_y(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
     if (!matched)
         return;
-    //char* arg = *((*tok)->args);
-    printf("TODO %c\n", (*tok)->command);//TODO
+    char* old = ((*tok)->args)[0];
+    char* new = ((*tok)->args)[1];
+    if (!bufs->pattern)
+        return;
+    for (;*old;old++) {
+        for (char* pattern = bufs->pattern; *pattern; pattern++)
+            if (*pattern == *old)
+                *pattern = *new;
+        new++;
+    }
 }
 
 void posix_process_eq(bool matched, token** tok, int* line_number, buffers* bufs, flags* fl, void* labels, FILE* in, FILE* out) {
